@@ -1,0 +1,923 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>智能会议室助手 | AI全托管</title>
+    <!-- 外部资源 -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <link rel="stylesheet" href="/static/css/style.css" />
+  </head>
+  <body>
+    <!-- 登录遮罩层 -->
+    <div id="loginOverlay" class="login-overlay">
+      <div class="login-box">
+        <h2 class="mb-4" id="authTitle">🔐 身份验证</h2>
+        <div class="form-group mb-3">
+          <input
+            type="text"
+            id="usernameInput"
+            class="form-control glass-input"
+            placeholder="请输入账号或姓名"
+          />
+        </div>
+        <div class="form-group mb-3">
+          <input
+            type="password"
+            id="passwordInput"
+            class="form-control glass-input"
+            placeholder="请输入密码"
+          />
+        </div>
+        <!-- 注册时二次确认密码 -->
+        <div class="form-group mb-4" id="confirmPasswordGroup">
+          <input
+            type="password"
+            id="confirmPasswordInput"
+            class="form-control glass-input"
+            placeholder="请再次输入密码"
+          />
+        </div>
+        <button class="btn btn-primary w-100 mb-3" id="authBtn" onclick="doAuth()">登录系统</button>
+        <div id="loginError" class="text-danger mb-2"></div>
+        <a
+          href="javascript:void(0)"
+          id="toggleAuthBtn"
+          class="text-muted"
+          onclick="toggleAuthMode()"
+          >还没有账号？点击注册</a
+        >
+      </div>
+    </div>
+    <div class="container">
+      <!-- 标题栏 -->
+      <div class="header text-center position-relative">
+        <div
+          class="position-absolute top-50 end-0 translate-middle-y me-3 d-flex align-items-center"
+        >
+          <div class="dropdown me-3">
+            <button
+              class="btn btn-light dropdown-toggle user-menu-btn"
+              type="button"
+              id="userMenuBtn"
+              data-bs-toggle="dropdown"
+              aria-expanded="false"
+              title="账号管理"
+            >
+              <i class="bi bi-person-circle fs-5"></i>
+              <span
+                id="currentAccountName"
+                class="ms-1 text-truncate d-inline-block align-bottom"
+                style="max-width: 80px"
+                >未登录</span
+              >
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenuBtn">
+              <li id="adminMenuGroup" style="display: none">
+                <a class="dropdown-item" href="/admin">
+                  <i class="bi bi-shield-lock"></i> 后台管理
+                </a>
+              </li>
+              <li id="adminMenuDivider" style="display: none"><hr class="dropdown-divider" /></li>
+              <li>
+                <button class="dropdown-item text-danger" onclick="logout()">
+                  <i class="bi bi-box-arrow-right"></i> 退出登录
+                </button>
+              </li>
+            </ul>
+          </div>
+          <button
+            class="btn btn-light settings-gear-btn"
+            data-bs-toggle="modal"
+            data-bs-target="#settingsModal"
+            title="接口设置"
+          >
+            <i class="bi bi-gear-fill fs-5"></i>
+          </button>
+        </div>
+        <h1><i class="bi bi-building-check"></i> 智能会议室助手</h1>
+        <p>AI全托管预约 · 实时状态监控 · 本地大模型驱动</p>
+      </div>
+
+      <!-- 主内容区 -->
+      <div class="main-container">
+        <!-- 左侧：会议室状态面板 -->
+        <div class="status-panel">
+          <h2><i class="bi bi-calendar-check"></i> 会议室实时状态</h2>
+
+          <!-- 日期选择 -->
+          <div class="date-selector">
+            <label for="queryDate">查询日期：</label>
+            <input type="date" id="queryDate" class="form-control" />
+          </div>
+
+          <!-- 会议室状态列表 -->
+          <div id="roomStatusList">
+            <!-- 动态加载会议室状态 -->
+          </div>
+        </div>
+
+        <!-- 右侧：AI聊天面板 -->
+        <div class="chat-panel">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2 class="mb-0"><i class="bi bi-chat-dots"></i> AI智能助手</h2>
+            <button
+              class="btn btn-outline-primary btn-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#summaryModal"
+            >
+              <i class="bi bi-journal-text"></i> 会议纪要
+            </button>
+          </div>
+
+          <!-- 聊天框 -->
+          <div class="chat-box" id="chatBox">
+            <div class="message ai-message">
+              <div class="message-content">
+                你好！我是智能会议室助手，支持以下操作：<br />
+                1. 预约会议室（例：预约明天下午2点到3点的会议室A，主题是产品评审会，预约人张三）<br />
+                2. 查询会议室状态（例：今天会议室B有哪些预约？）<br />
+                3. 咨询会议室信息（例：会议室A能容纳多少人？有什么设备？）
+              </div>
+            </div>
+          </div>
+
+          <!-- 输入框 -->
+          <div class="chat-input chat-input-wrapper">
+            <input
+              type="text"
+              id="chatInput"
+              placeholder="请输入你的请求..."
+              class="form-control"
+            />
+            <button id="sendBtn" class="btn" title="发送"><i class="bi bi-send"></i></button>
+          </div>
+
+          <div class="hint-text">
+            示例：预约明天 14:00到15:00的会议室B，预约人李四，主题是技术分享会
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 会议纪要 Modal -->
+    <div
+      class="modal fade"
+      id="summaryModal"
+      tabindex="-1"
+      aria-labelledby="summaryModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="summaryModalLabel">
+              <i class="bi bi-journal-text"></i> 生成会议纪要
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="alert alert-info">
+              直接粘贴会议文本，AI 将自动分析提取核心议题、决定及待办等。
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-bold">会议记录内容：</label>
+              <textarea
+                id="meetingText"
+                class="form-control"
+                rows="6"
+                placeholder="请在这里输入会议内容..."
+              ></textarea>
+            </div>
+
+            <hr />
+
+            <div class="mb-3">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-bold mb-0">AI 纪要结果：</label>
+                <button id="generateSummaryBtn" class="btn btn-primary btn-sm">
+                  <i class="bi bi-magic"></i> 生成纪要
+                </button>
+              </div>
+              <div id="summaryResult" class="border rounded p-3 bg-light summary-result-custom">
+                （生成结果将显示在这里）
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 接口设置 Modal -->
+    <div
+      class="modal fade"
+      id="settingsModal"
+      tabindex="-1"
+      aria-labelledby="settingsModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="settingsModalLabel">
+              <i class="bi bi-sliders"></i> 模型接口设置
+            </h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label fw-bold">选择大模型能力模式：</label>
+              <select id="modelSelectInput" class="form-select">
+                <option value="qwen/qwen3-4b-2507">🚀 快速响应模型 (qwen3-4b-2507)</option>
+                <option value="qwen3.5-35b-a3b">🧠 专家思考模型 (qwen3.5-35b-a3b)</option>
+              </select>
+              <div class="form-text">注意：切换前请确保您已经在 LM Studio 中加载了对应的模型。</div>
+            </div>
+
+            <div class="mb-3 border-top pt-3 mt-3">
+              <label class="form-label fw-bold"><i class="bi bi-image"></i> 自定义背景图：</label>
+              <input
+                type="text"
+                id="bgImageInput"
+                class="form-control"
+                placeholder="输入网络URL或者本地路径（例如 static/bg.png），留空则使用默认壁纸"
+              />
+              <div class="form-text">
+                支持网络链接，也可以使用本地图片。如果您想使用本地图片，请在项目下新建
+                <code>static</code> 文件夹，将图片放进去，然后在这里输入
+                <code>/static/您的图片名.png</code>。
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary" id="saveSettingsBtn">保存并生效</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      let currentUser = sessionStorage.getItem("meeting_auth_user");
+      let isRegisterMode = false;
+
+      function toggleAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        document.getElementById("authTitle").innerHTML = isRegisterMode
+          ? "📝 注册新账户"
+          : "🔐 身份验证";
+        document.getElementById("authBtn").textContent = isRegisterMode ? "立即注册" : "登录系统";
+        document.getElementById("toggleAuthBtn").textContent = isRegisterMode
+          ? "已有账号？去登录"
+          : "还没有账号？点击注册";
+        document.getElementById("confirmPasswordGroup").style.display = isRegisterMode
+          ? "block"
+          : "none";
+        document.getElementById("loginError").style.display = "none";
+      }
+
+      async function doAuth() {
+        const username = document.getElementById("usernameInput").value.trim();
+        const pwd = document.getElementById("passwordInput").value.trim();
+        const confirmPwd = document.getElementById("confirmPasswordInput").value.trim();
+        const errDiv = document.getElementById("loginError");
+        errDiv.style.display = "none";
+
+        if (!username || !pwd) {
+          errDiv.textContent = "请完整填写账号和密码。";
+          errDiv.style.display = "block";
+          return;
+        }
+
+        if (isRegisterMode && pwd !== confirmPwd) {
+          errDiv.textContent = "两次输入的密码不一致，请重试。";
+          errDiv.style.display = "block";
+          return;
+        }
+
+        const endpoint = isRegisterMode ? "/api/register" : "/api/login";
+
+        try {
+          const res = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username: username, password: pwd }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            if (isRegisterMode) {
+              // 注册成功，切换回登录
+              alert(data.msg);
+              toggleAuthMode();
+              document.getElementById("passwordInput").value = "";
+              document.getElementById("confirmPasswordInput").value = "";
+            } else {
+              // 登录成功
+              currentUser = data.username;
+              sessionStorage.setItem("meeting_auth_user", currentUser);
+              sessionStorage.setItem("meeting_auth_token", data.token);
+              document.getElementById("currentAccountName").textContent = currentUser;
+
+              if (currentUser === "admin") {
+                document.getElementById("adminMenuGroup").style.display = "block";
+                document.getElementById("adminMenuDivider").style.display = "block";
+              }
+
+              // 登录成功动画消失
+              const overlay = document.getElementById("loginOverlay");
+              overlay.style.opacity = "0";
+              setTimeout(() => {
+                overlay.style.display = "none";
+              }, 500);
+
+              // 初始化背景
+              loadBackgroundSetting();
+            }
+          } else {
+            errDiv.textContent = data.msg;
+            errDiv.style.display = "block";
+          }
+        } catch (e) {
+          errDiv.textContent = "网络错误，请稍后再试。";
+          errDiv.style.display = "block";
+        }
+      }
+
+      function logout() {
+        if (!confirm("确定要退出登录吗？")) return;
+        sessionStorage.removeItem("meeting_auth_user");
+        sessionStorage.removeItem("meeting_auth_token");
+        currentUser = null;
+
+        const overlay = document.getElementById("loginOverlay");
+        overlay.style.display = "flex";
+        setTimeout(() => {
+          overlay.style.opacity = "1";
+        }, 10);
+
+        applyBackgroundImage(null); // 退回默认背景给登录用
+      }
+
+      // 初始化
+      document.addEventListener("DOMContentLoaded", function () {
+        // 检查登录状态
+        if (currentUser) {
+          document.getElementById("loginOverlay").style.display = "none";
+          document.getElementById("currentAccountName").textContent = currentUser;
+          if (currentUser === "admin") {
+            document.getElementById("adminMenuGroup").style.display = "block";
+            document.getElementById("adminMenuDivider").style.display = "block";
+          }
+          loadBackgroundSetting();
+        } else {
+          applyBackgroundImage(null); // 退回默认背景给登录用
+        }
+
+        // 密码框回车键登录
+        document.getElementById("passwordInput").addEventListener("keypress", function (e) {
+          if (e.key === "Enter") doAuth();
+        });
+        document.getElementById("confirmPasswordInput").addEventListener("keypress", function (e) {
+          if (e.key === "Enter") doAuth();
+        });
+
+        // 设置默认日期：由于时区问题，toISOString获取的可能是前一天。我们需要计算出本地的准确日期
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, "0");
+        const day = String(now.getDate()).padStart(2, "0");
+        const today = `${year}-${month}-${day}`;
+        document.getElementById("queryDate").value = today;
+
+        // 加载会议室状态
+        loadRoomStatus();
+
+        // 绑定事件
+        document.getElementById("queryDate").addEventListener("change", loadRoomStatus);
+        document.getElementById("sendBtn").addEventListener("click", sendMessage);
+        document.getElementById("chatInput").addEventListener("keypress", function (e) {
+          if (e.key === "Enter") sendMessage();
+        });
+
+        // 初始化加载设置
+        loadSettings();
+
+        // 会议纪要生成事件
+        document.getElementById("generateSummaryBtn").addEventListener("click", generateSummary);
+
+        // 保存设置事件
+        document.getElementById("saveSettingsBtn").addEventListener("click", saveSettings);
+      });
+
+      // ---------------- 背景图相关逻辑 ----------------
+      function applyBackgroundImage(url) {
+        if (url && url.trim() !== "") {
+          document.body.style.background = `url('${url}') center/cover no-repeat fixed, linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)`;
+        } else {
+          document.body.style.background =
+            "url('/static/001.jpg') center/cover no-repeat fixed, linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%)";
+        }
+      }
+
+      function loadBackgroundSetting() {
+        const savedBg = localStorage.getItem("meeting_assistant_bg");
+        if (savedBg) {
+          document.getElementById("bgImageInput").value = savedBg;
+          applyBackgroundImage(savedBg);
+        }
+      }
+
+      let currentModel = ""; // 记录当前选择的模型，避免不必要的提示
+
+      // ---------------- 接口设置相关逻辑 ----------------
+      async function loadSettings() {
+        try {
+          const res = await fetch("/api/settings");
+          const data = await res.json();
+          if (data.model) {
+            currentModel = data.model;
+            const select = document.getElementById("modelSelectInput");
+            if ([...select.options].some((opt) => opt.value === data.model)) {
+              select.value = data.model;
+            }
+            updateMicVisibilityByModel(data.model);
+          }
+        } catch (e) {
+          console.error("加载设置失败", e);
+        }
+      }
+
+      async function saveSettings() {
+        const btn = document.getElementById("saveSettingsBtn");
+        const model = document.getElementById("modelSelectInput").value;
+        let bgImageUrl = document.getElementById("bgImageInput").value.trim();
+
+        // 移除多余的引号
+        bgImageUrl = bgImageUrl.replace(/^['"]+|['"]+$/g, "");
+
+        // 拦截本地绝对路径输入并提示
+        if (/^[a-zA-Z]:/.test(bgImageUrl)) {
+          alert(
+            "检测到似乎是本地磁盘路径（如 E:\\...）。请将网页背景图片放入 static 文件夹内，并使用 /static/图片名 格式进行配置。",
+          );
+          return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML =
+          '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 保存中...';
+
+        // 1. 本地存储更新背景图
+        localStorage.setItem("meeting_assistant_bg", bgImageUrl);
+        document.getElementById("bgImageInput").value = bgImageUrl;
+        applyBackgroundImage(bgImageUrl);
+
+        // 2. 接口提交更新模型
+        try {
+          const res = await fetch("/api/settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ model: model }),
+          });
+          const data = await res.json();
+          if (data.success) {
+            // 关闭模态框
+            const modalEl = document.getElementById("settingsModal");
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            modal.hide();
+
+            // 更新麦克风按钮状态
+            updateMicVisibilityByModel(model);
+
+            // 在对话框里悄悄提示一句（只有模型真正改变时才提示）
+            if (model !== currentModel) {
+              const chatBox = document.getElementById("chatBox");
+              chatBox.innerHTML += `
+                <div class="message ai-message">
+                    <div class="message-content text-success">
+                        <i class="bi bi-check-circle"></i> 模型接口已切换至：${model.includes("35b") ? "专家思考模型" : "快速响应模型"}
+                    </div>
+                    <div class="message-time">系统提示</div>
+                </div>
+              `;
+              chatBox.scrollTop = chatBox.scrollHeight;
+              currentModel = model;
+            }
+          } else {
+            alert(data.msg || "保存失败");
+          }
+        } catch (e) {
+          alert("请求失败，请检查网络！");
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = "保存并生效";
+        }
+      }
+
+      // ---------------- 语音识别相关逻辑 ----------------
+      let voiceRecognition = null;
+      let meetingRecognition = null;
+      let isRecordingChat = false;
+      let isRecordingMeeting = false;
+
+      function initSpeechRecognition() {
+        if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
+          console.warn("当前浏览器不支持语音识别 API");
+          document.getElementById("micBtn").style.display = "none";
+          document.getElementById("recordMeetingBtn").style.display = "none";
+          return;
+        }
+
+        const SpeechRecognize = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        // 1. 聊天语音录入
+        voiceRecognition = new SpeechRecognize();
+        voiceRecognition.lang = "zh-CN";
+        voiceRecognition.continuous = false;
+        voiceRecognition.interimResults = true;
+
+        voiceRecognition.onresult = function (event) {
+          let interimTranscript = "";
+          let finalTranscript = "";
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript;
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+
+          let input = document.getElementById("chatInput");
+          if (finalTranscript) {
+            input.value = finalTranscript;
+            // 收到最终结果，自动发送
+            sendMessage();
+          } else {
+            input.value = interimTranscript;
+          }
+        };
+
+        voiceRecognition.onend = function () {
+          isRecordingChat = false;
+          const micBtn = document.getElementById("micBtn");
+          micBtn.classList.remove("btn-danger");
+          micBtn.classList.add("btn-outline-secondary");
+          micBtn.innerHTML = '<i class="bi bi-mic"></i>';
+        };
+
+        document.getElementById("micBtn").addEventListener("click", function () {
+          if (isRecordingChat) {
+            voiceRecognition.stop();
+          } else {
+            document.getElementById("chatInput").value = "";
+            voiceRecognition.start();
+            isRecordingChat = true;
+            this.classList.remove("btn-outline-secondary");
+            this.classList.add("btn-danger");
+            this.innerHTML = '<i class="bi bi-stop-circle"></i>';
+          }
+        });
+
+        // 2. 会议纪要持续录音
+        meetingRecognition = new SpeechRecognize();
+        meetingRecognition.lang = "zh-CN";
+        meetingRecognition.continuous = true;
+        meetingRecognition.interimResults = true;
+
+        meetingRecognition.onresult = function (event) {
+          let interimTranscript = "";
+          let finalTranscript = "";
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript + "。";
+            } else {
+              interimTranscript += event.results[i][0].transcript;
+            }
+          }
+
+          let textArea = document.getElementById("meetingText");
+          // 追加最终结果到原有文本
+          if (finalTranscript) {
+            textArea.value += finalTranscript + "\n";
+          }
+        };
+
+        meetingRecognition.onend = function () {
+          if (isRecordingMeeting) {
+            // 如果意外中断，尝试重启
+            try {
+              meetingRecognition.start();
+            } catch (e) {}
+          }
+        };
+
+        document.getElementById("recordMeetingBtn").addEventListener("click", function () {
+          if (isRecordingMeeting) {
+            isRecordingMeeting = false;
+            meetingRecognition.stop();
+            this.classList.remove("btn-danger");
+            this.classList.add("btn-outline-danger");
+            document.getElementById("recordMeetingText").innerText = "继续录音";
+            this.innerHTML =
+              '<i class="bi bi-record-circle"></i> <span id="recordMeetingText">继续录音</span>';
+          } else {
+            isRecordingMeeting = true;
+            try {
+              meetingRecognition.start();
+            } catch (e) {}
+            this.classList.remove("btn-outline-danger");
+            this.classList.add("btn-danger");
+            this.innerHTML =
+              '<i class="bi bi-stop-circle"></i> <span id="recordMeetingText">停止录音</span>';
+          }
+        });
+      }
+      // ----------------------------------------------------
+
+      // 加载会议室状态
+      async function loadRoomStatus() {
+        const date = document.getElementById("queryDate").value;
+        try {
+          const response = await fetch(`/api/room_status?date=${date}`);
+          const rooms = await response.json();
+          const statusList = document.getElementById("roomStatusList");
+
+          let html = "";
+          rooms.forEach((room) => {
+            html += `
+                    <div class="room-card">
+                        <h3>
+                            ${room.name}
+                            <span class="badge bg-primary">${room.capacity}人</span>
+                        </h3>
+                        <div class="room-info">
+                            <span><i class="bi bi-gear"></i> ${room.equipment}</span>
+                        </div>
+                        <div class="reservations">
+                    `;
+
+            if (room.reservations.length === 0) {
+              html += `<div class="no-reservation"><i class="bi bi-check-circle"></i> 当日暂无预约</div>`;
+            } else {
+              room.reservations.forEach((res) => {
+                // 格式化时间显示
+                const startTime = res.start_time.replace(" ", " ").slice(0, 16);
+                const endTime = res.end_time.replace(" ", " ").slice(0, 16);
+                html += `
+                            <div class="time-slot">
+                                <div class="time">${startTime} - ${endTime}</div>
+                                <div class="details">
+                                    <span><i class="bi bi-person"></i> ${res.user_name}</span>
+                                    <span><i class="bi bi-tag"></i> ${res.meeting_topic}</span>
+                                </div>
+                            </div>
+                            `;
+              });
+            }
+
+            html += `
+                        </div>
+                    </div>
+                    `;
+          });
+
+          statusList.innerHTML = html;
+        } catch (error) {
+          console.error("加载状态失败：", error);
+          document.getElementById("roomStatusList").innerHTML = `
+                    <div class="alert alert-danger">加载失败：${error.message}</div>
+                `;
+        }
+      }
+
+      let chatHistory = []; // 用于保存上下文记忆
+
+      // 发送消息
+      async function sendMessage() {
+        const input = document.getElementById("chatInput");
+        const message = input.value.trim();
+        if (!message) return;
+
+        // 向上下文加入用户消息
+        chatHistory.push({ role: "user", content: message });
+        // 保持上下文不要太长，最多保留最近的8条（即4轮对话），避免占用太多token
+        if (chatHistory.length > 8) {
+          chatHistory = chatHistory.slice(chatHistory.length - 8);
+        }
+
+        // 如果在语音识别期间发送，需要停止识别
+        if (voiceRecognition && isRecordingChat) {
+          voiceRecognition.stop();
+        }
+
+        // 添加用户消息
+        const chatBox = document.getElementById("chatBox");
+        const now = new Date().toLocaleTimeString();
+        chatBox.innerHTML += `
+                <div class="message user-message">
+                    <div class="message-content">${message}</div>
+                    <div class="message-time">${now}</div>
+                </div>
+            `;
+        input.value = "";
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // 添加本地思考中骨架屏动画
+        const thinkingId = "thinking-" + Date.now();
+        chatBox.innerHTML += `
+            <div class="message ai-message" id="${thinkingId}">
+                <div class="message-content" style="width: 100%; max-width: 300px;">
+                    <div class="skeleton-container">
+                        <div class="skeleton-line title"></div>
+                        <div class="skeleton-line w-100"></div>
+                        <div class="skeleton-line w-75"></div>
+                    </div>
+                </div>
+                <div class="message-time">大模型持续推理中...</div>
+            </div>
+        `;
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // 调用AI接口 (SSE流式)
+        try {
+          // 由于我们将发送的 message 是当次的新提问，history 传送前面截取的数组（不包括此次问题本身），这样后端就不会重复
+          const historyToSend = chatHistory.slice(0, chatHistory.length - 1);
+
+          const response = await fetch("/api/ai_chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + sessionStorage.getItem("meeting_auth_token"),
+            },
+            body: JSON.stringify({
+              prompt: message,
+              history: historyToSend,
+            }),
+          });
+
+          if (response.status === 401) {
+            alert("登录已过期或未登录，请重新登录！");
+            logout();
+            return;
+          }
+
+          // 移除思考中动画
+          const thinkingNode = document.getElementById(thinkingId);
+          if (thinkingNode) thinkingNode.remove();
+
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          // 创建一个新的AI聊天框接收流
+          const aiMessageId = "aimsg-" + Date.now();
+          chatBox.innerHTML += `
+                    <div class="message ai-message" id="${aiMessageId}">
+                        <div class="message-content"></div>
+                        <div class="message-time">${now}</div>
+                    </div>
+                `;
+          const msgContent = document.querySelector(`#${aiMessageId} .message-content`);
+
+          let fullAiResponse = "";
+          let sseBuffer = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            sseBuffer += decoder.decode(value, { stream: true });
+            const lines = sseBuffer.split("\n\n");
+
+            // 保留最后一个不完整的块（或者正好是空字符串）
+            sseBuffer = lines.pop();
+
+            for (let line of lines) {
+              if (line.startsWith("data: ")) {
+                let data;
+                try {
+                  data = JSON.parse(line.substring(6));
+                } catch (e) {
+                  continue;
+                }
+
+                if (data.type === "think") {
+                  msgContent.innerHTML =
+                    "<span class='text-muted'><i>" + data.content + "</i></span><br>";
+                  chatBox.scrollTop = chatBox.scrollHeight;
+                } else if (data.type === "chunk") {
+                  // 移除之前的思考提示
+                  if (msgContent.innerHTML.includes("text-muted")) {
+                    msgContent.innerHTML = "";
+                  }
+                  msgContent.innerHTML += data.content.replace(/\n/g, "<br>");
+                  fullAiResponse += data.content;
+                  chatBox.scrollTop = chatBox.scrollHeight;
+                } else if (data.type === "action") {
+                  msgContent.innerHTML = data.content.replace(/\n/g, "<br>");
+                  fullAiResponse = data.content; // 如果是动作，记录动作提示作为AI回复上下文
+                  chatBox.scrollTop = chatBox.scrollHeight;
+                  if (data.refresh) {
+                    setTimeout(loadRoomStatus, 1000);
+                  }
+                } else if (data.type === "error") {
+                  msgContent.innerHTML += `<div class="text-danger mt-2"><i class="bi bi-exclamation-triangle"></i> ${data.content}</div>`;
+                  chatBox.scrollTop = chatBox.scrollHeight;
+                }
+              }
+            }
+          }
+
+          // 流结束，将AI最终回复存入上下文
+          if (fullAiResponse.trim() !== "") {
+            chatHistory.push({ role: "assistant", content: fullAiResponse });
+          }
+        } catch (error) {
+          // 移除思考中动画
+          const thinkingNode = document.getElementById(thinkingId);
+          if (thinkingNode) thinkingNode.remove();
+
+          chatBox.innerHTML += `
+                    <div class="message ai-message">
+                        <div class="message-content text-danger">
+                            <i class="bi bi-exclamation-triangle"></i> 服务异常：${error.message}
+                        </div>
+                        <div class="message-time">${now}</div>
+                    </div>
+                `;
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+      }
+
+      // 生成会议纪要
+      async function generateSummary() {
+        const text = document.getElementById("meetingText").value.trim();
+        const resultDiv = document.getElementById("summaryResult");
+        const btn = document.getElementById("generateSummaryBtn");
+
+        if (!text) {
+          alert("请先输入或录入会议内容！");
+          return;
+        }
+
+        // 修改UI状态为生成中
+        btn.disabled = true;
+        btn.innerHTML =
+          '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> 生成中...';
+        resultDiv.innerHTML = `
+          <div class="d-flex align-items-center text-primary">
+            <div class="spinner-border ms-auto" role="status" aria-hidden="true"></div>
+            <strong>AI 正在努力阅读并总结纪要，请稍候...</strong>
+          </div>
+        `;
+
+        try {
+          const response = await fetch("/api/meeting_summary", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + sessionStorage.getItem("meeting_auth_token"),
+            },
+            body: JSON.stringify({ text: text }),
+          });
+          if (response.status === 401) {
+            alert("登录已过期或未登录，请重新登录！");
+            logout();
+            return;
+          }
+          const result = await response.json();
+          resultDiv.innerHTML = result.content.replace(/\n/g, "<br>");
+        } catch (error) {
+          resultDiv.innerHTML = `<div class="text-danger"><i class="bi bi-exclamation-triangle"></i> 生成失败：${error.message}</div>`;
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="bi bi-magic"></i> 生成纪要';
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+# 数据库文件 (如果是测试数据可以不传，避免覆盖或者泄露用户隐私)
+*.sqlite3
+*.db
+meeting_room.db
+
+# 环境变量 (绝对不能上传，里面有密码和秘钥！)
+.env
+
+# Python 缓存和虚拟环境
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+ENV/
+
+# 编辑器配置
+.vscode/
+.idea/
+
+# 日志文件
+*.log

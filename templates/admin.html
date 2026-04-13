@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>后台管理 | 会议室系统</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
+    />
+    <style>
+      body {
+        background: url("/static/001.jpg") center/cover no-repeat fixed, linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+        padding: 30px;
+        font-family: "Inter", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        min-height: 100vh;
+      }
+      .card {
+        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      }
+      .card-header {
+        background: transparent !important;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+      }
+      .table {
+        background: transparent;
+      }
+      .table th {
+        font-weight: 600;
+        color: #4a5568;
+        border-bottom-width: 1px;
+      }
+      .table tr {
+        border-color: rgba(0, 0, 0, 0.05);
+      }
+      .btn-glass {
+        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+        transition: all 0.3s;
+      }
+      .btn-glass:hover {
+        background: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      }
+      .modal-content {
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="m-0"><i class="bi bi-shield-lock-fill text-primary"></i> 会议室后台管理系统</h2>
+        <div>
+            <button class="btn btn-outline-secondary me-2" onclick="window.location.href='/'">
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+          <h5 class="m-0">会议室资源列表</h5>
+          <button class="btn btn-primary" onclick="openRoomModal()">
+            <i class="bi bi-plus-lg"></i> 新增会议室
+          </button>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th width="10%">ID</th>
+                  <th width="25%">会议室名称</th>
+                  <th width="15%">可容纳人数</th>
+                  <th width="35%">设备设施</th>
+                  <th width="15%" class="text-end">操作</th>
+                </tr>
+              </thead>
+              <tbody id="roomTableBody">
+                <tr>
+                  <td colspan="5" class="text-center text-muted py-4">载入中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+          <h5 class="m-0">全量预约记录管理</h5>
+          <div>
+            <button class="btn btn-primary me-2" onclick="openReservationModal()">
+              <i class="bi bi-calendar-plus"></i> 新增排期
+            </button>
+            <button class="btn btn-danger" onclick="batchDeleteReservations()">
+              <i class="bi bi-trash"></i> 批量删除已选
+            </button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th width="5%"><input class="form-check-input" type="checkbox" id="selectAllRes" onclick="toggleSelectAll()"></th>
+                  <th width="15%">预约人</th>
+                  <th width="20%">预约时间</th>
+                  <th width="15%">会议室</th>
+                  <th width="35%">主题</th>
+                  <th width="10%" class="text-end">操作</th>
+                </tr>
+              </thead>
+              <tbody id="reservationTableBody">
+                <tr>
+                  <td colspan="6" class="text-center text-muted py-4">载入中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Room Modal -->
+    <div class="modal fade" id="roomModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+          <div class="modal-header border-bottom-0">
+            <h5 class="modal-title" id="roomModalTitle"><i class="bi bi-sliders"></i> 会议室参数</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body py-1">
+            <input type="hidden" id="roomIdInput" />
+            <div class="mb-3">
+              <label class="form-label text-muted small fw-bold mb-1">会议室名称 *</label>
+              <input type="text" class="form-control btn-glass" id="roomNameInput" placeholder="如：会议室A" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-muted small fw-bold mb-1">容纳人数</label>
+              <input type="number" class="form-control btn-glass" id="roomCapacityInput" placeholder="如：10" value="10" />
+            </div>
+            <div class="mb-3">
+              <label class="form-label text-muted small fw-bold mb-1">配备设施</label>
+              <input type="text" class="form-control btn-glass" id="roomEquipmentInput" placeholder="如：白板、投影仪、视频会议" />
+            </div>
+          </div>
+          <div class="modal-footer border-top-0 pt-0 mt-3">
+            <button type="button" class="btn btn-light btn-glass" data-bs-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary shadow-sm" onclick="saveRoom()">保存</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reservation Modal -->
+    <div class="modal fade" id="resModal" tabindex="-1">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+          <div class="modal-header border-bottom-0">
+            <h5 class="modal-title"><i class="bi bi-calendar-plus"></i> 新增系统排期</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body py-1">
+            <div class="mb-3">
+              <label class="form-label text-muted small fw-bold mb-1">选择会议室 *</label>
+              <select class="form-select btn-glass" id="resRoomSelect"></select>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-muted small fw-bold mb-1">预约人账号 *</label>
+                <input type="text" class="form-control btn-glass" id="resUserInput" placeholder="如：admin" />
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-muted small fw-bold mb-1">会议主题</label>
+                <input type="text" class="form-control btn-glass" id="resTopicInput" placeholder="如：产品评审会" />
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-muted small fw-bold mb-1">开始时间 *</label>
+                <input type="datetime-local" class="form-control btn-glass" id="resStartInput" />
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label text-muted small fw-bold mb-1">结束时间 *</label>
+                <input type="datetime-local" class="form-control btn-glass" id="resEndInput" />
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-top-0 pt-0 mt-3">
+            <button type="button" class="btn btn-light btn-glass" data-bs-dismiss="modal">取消</button>
+            <button type="button" class="btn btn-primary shadow-sm" onclick="saveReservation()">提交排期</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      let roomModal;
+      let resModal;
+      let allRoomsData = [];
+      const token = sessionStorage.getItem("meeting_auth_token");
+
+      document.addEventListener("DOMContentLoaded", () => {
+        if (!token) {
+          alert("登录凭证已失效，请重新登录");
+          window.location.href = "/";
+          return;
+        }
+        roomModal = new bootstrap.Modal(document.getElementById("roomModal"));
+        resModal = new bootstrap.Modal(document.getElementById("resModal"));
+        loadRooms();
+        loadReservations();
+      });
+
+      async function apiCall(method, bodyData = null) {
+        const options = {
+          method: method,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+        };
+        if (bodyData) options.body = JSON.stringify(bodyData);
+        const res = await fetch("/api/admin/rooms", options);
+        if (res.status === 401) {
+          alert("无权限或登录过期");
+          window.location.href = "/";
+          return null;
+        }
+        return await res.json();
+      }
+
+      async function loadRooms() {
+        const data = await apiCall("GET");
+        if (!data || !data.success) return;
+
+        allRoomsData = data.rooms;
+
+        const tbody = document.getElementById("roomTableBody");
+        tbody.innerHTML = "";
+        if (data.rooms.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="5" class="text-center text-muted">暂无数据，请新增</td></tr>';
+          return;
+        }
+
+        data.rooms.forEach((r) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+        <td><span class="badge bg-secondary"># ${r.id}</span></td>
+        <td class="fw-bold">${r.name}</td>
+        <td><i class="bi bi-people text-muted"></i> ${r.capacity} 人</td>
+        <td class="text-truncate" style="max-width:200px;">${r.equipment || "-"}</td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-primary me-1" onclick='editRoom(${JSON.stringify(r)})'><i class="bi bi-pencil-square"></i></button>
+          <button class="btn btn-sm btn-outline-danger" onclick='deleteRoom(${r.id})'><i class="bi bi-trash"></i></button>
+        </td>
+      `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      function openRoomModal() {
+        document.getElementById("roomModalTitle").innerHTML = '<i class="bi bi-sliders"></i> 新增会议室';
+        document.getElementById("roomIdInput").value = "";
+        document.getElementById("roomNameInput").value = "";
+        document.getElementById("roomCapacityInput").value = "10";
+        document.getElementById("roomEquipmentInput").value = "";
+        roomModal.show();
+      }
+
+      function openReservationModal() {
+        // Populate room options
+        const select = document.getElementById("resRoomSelect");
+        select.innerHTML = '<option value="">--请选择会议室--</option>';
+        allRoomsData.forEach(room => {
+          const option = document.createElement("option");
+          option.value = room.id;
+          option.textContent = `${room.name} (容纳${room.capacity}人)`;
+          select.appendChild(option);
+        });
+
+        document.getElementById("resUserInput").value = "admin";
+        document.getElementById("resTopicInput").value = "系统排期分配";
+
+        const now = new Date();
+        const start = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+        const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+        document.getElementById("resStartInput").value = start.toISOString().slice(0, 16);
+        document.getElementById("resEndInput").value = end.toISOString().slice(0, 16);
+
+        resModal.show();
+      }
+
+      async function saveReservation() {
+        const roomId = document.getElementById("resRoomSelect").value;
+        const userName = document.getElementById("resUserInput").value.trim();
+        const topic = document.getElementById("resTopicInput").value.trim();
+        const startStr = document.getElementById("resStartInput").value;
+        const endStr = document.getElementById("resEndInput").value;
+
+        if (!roomId || !userName || !startStr || !endStr) {
+          return alert("带有 * 号的项为必填项！");
+        }
+        if (startStr >= endStr) {
+          return alert("结束时间必须晚于开始时间！");
+        }
+
+        const payload = {
+          room_id: roomId,
+          user_name: userName,
+          meeting_topic: topic,
+          start_time: startStr,
+          end_time: endStr
+        };
+
+        const res = await apiCallReservations("POST", payload);
+        if (res && res.success) {
+          resModal.hide();
+          loadReservations();
+          alert("新增排期成功！");
+        } else {
+          alert(res?.msg || "操作失败");
+        }
+      }
+
+      function editRoom(room) {
+        document.getElementById("roomModalTitle").innerHTML = '<i class="bi bi-sliders"></i> 编辑会议室';
+        document.getElementById("roomIdInput").value = room.id;
+        document.getElementById("roomNameInput").value = room.name;
+        document.getElementById("roomCapacityInput").value = room.capacity;
+        document.getElementById("roomEquipmentInput").value = room.equipment;
+        roomModal.show();
+      }
+
+      async function saveRoom() {
+        const id = document.getElementById("roomIdInput").value;
+        const name = document.getElementById("roomNameInput").value.trim();
+        if (!name) return alert("名称不能为空");
+
+        const payload = {
+          name,
+          capacity: parseInt(document.getElementById("roomCapacityInput").value) || 0,
+          equipment: document.getElementById("roomEquipmentInput").value.trim(),
+        };
+
+        let res;
+        if (id) {
+          payload.id = id;
+          res = await apiCall("PUT", payload);
+        } else {
+          res = await apiCall("POST", payload);
+        }
+
+        if (res && res.success) {
+          roomModal.hide();
+          loadRooms();
+        } else {
+          alert(res?.msg || "操作失败");
+        }
+      }
+
+      async function deleteRoom(id) {
+        if (!confirm("确定要删除该会议室吗？这将同步删除该会议室下的所有历史预约记录！")) return;
+        const res = await apiCall("DELETE", { id });
+        if (res && res.success) {
+          loadRooms();
+          loadReservations();
+        }
+        else alert(res?.msg || "操作失败");
+      }
+
+      async function apiCallReservations(method, bodyData = null) {
+        const options = {
+          method: method,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+        };
+        if (bodyData) options.body = JSON.stringify(bodyData);
+        const res = await fetch("/api/admin/reservations", options);
+        if (res.status === 401) {
+          alert("无权限或登录过期");
+          window.location.href = "/";
+          return null;
+        }
+        return await res.json();
+      }
+
+      async function loadReservations() {
+        const data = await apiCallReservations("GET");
+        if (!data || !data.success) return;
+
+        const tbody = document.getElementById("reservationTableBody");
+        tbody.innerHTML = "";
+        if (!data.reservations || data.reservations.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="6" class="text-center text-muted py-4">暂无预约记录</td></tr>';
+          return;
+        }
+
+        data.reservations.forEach((r) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td><input class="form-check-input res-checkbox" type="checkbox" value="${r.id}"></td>
+            <td class="fw-bold"><i class="bi bi-person-circle text-muted"></i> ${r.user_name}</td>
+            <td style="font-size: 0.9em;">
+              <div><span class="text-primary">起</span> ${r.start_time.replace(' ', '&nbsp;')}</div>
+              <div><span class="text-danger">止</span> ${r.end_time.replace(' ', '&nbsp;')}</div>
+            </td>
+            <td><span class="badge bg-info text-dark">${r.room_name || "未知会议室"}</span></td>
+            <td class="text-truncate" style="max-width:250px;">${r.meeting_topic || "无"}</td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-outline-danger" onclick='deleteReservation(${r.id})'><i class="bi bi-trash"></i></button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+        document.getElementById('selectAllRes').checked = false;
+      }
+
+      function toggleSelectAll() {
+        const checkboxes = document.querySelectorAll('.res-checkbox');
+        const selectAll = document.getElementById('selectAllRes').checked;
+        checkboxes.forEach(cb => cb.checked = selectAll);
+      }
+
+      async function deleteReservation(id) {
+        if (!confirm("确定要删除这条预约记录吗？")) return;
+        const res = await apiCallReservations("DELETE", { ids: [id] });
+        if (res && res.success) loadReservations();
+        else alert(res?.msg || "删除失败");
+      }
+
+      async function batchDeleteReservations() {
+        const checkboxes = document.querySelectorAll('.res-checkbox:checked');
+        const ids = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+        if (ids.length === 0) {
+          return alert("请至少选中一条要删除的预约记录！");
+        }
+
+        if (!confirm(`确定要批量删除这 ${ids.length} 条预约记录吗？此操作不可恢复。`)) return;
+
+        const res = await apiCallReservations("DELETE", { ids: ids });
+        if (res && res.success) {
+          alert(res.msg || "删除成功");
+          loadReservations();
+        } else {
+          alert(res?.msg || "批量删除失败");
+        }
+      }
+    </script>
+  </body>
+</html>
