@@ -442,26 +442,6 @@ body {
   box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
 }
 
-.chat-input button#micBtn {
-  border: none;
-  background: white;
-  color: #718096;
-  transition: all 0.3s;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.chat-input button#micBtn:hover {
-  color: #667eea;
-  background: #f8faff;
-}
-
-.chat-input button#micBtn.btn-danger {
-  background: #feeee8;
-  color: #e53e3e;
-  box-shadow: 0 0 0 4px rgba(229, 62, 62, 0.1);
-  animation: pulse 1.5s infinite;
-}
-
 @keyframes pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(229, 62, 62, 0.4);
@@ -486,6 +466,10 @@ body {
 
 /* 响应式适配 */
 @media (max-width: 768px) {
+  body {
+    padding: 15px 10px;
+  }
+
   .main-container {
     flex-direction: column;
   }
@@ -503,10 +487,41 @@ body {
 
   .header {
     padding: 20px 16px;
+    flex-direction: column !important;
+    gap: 15px;
+  }
+
+  .header .position-absolute {
+    position: static !important;
+    transform: none !important;
+    justify-content: center;
+    width: 100%;
+    margin-top: 10px;
   }
 
   .header h1 {
-    font-size: 1.8rem;
+    font-size: 1.5rem;
+    text-align: center;
+  }
+
+  .date-selector {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .login-box {
+    width: 90%;
+    max-width: 400px;
+    padding: 30px 20px;
+    margin: 10px;
+  }
+
+  .chat-input-wrapper {
+    flex-wrap: wrap;
+  }
+
+  .chat-input-wrapper textarea {
+    min-height: 80px;
   }
 }
 

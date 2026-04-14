@@ -2,6 +2,8 @@
 *.sqlite3
 *.db
 meeting_room.db
+*.db-shm
+*.db-wal
 
 # 环境变量 (绝对不能上传，里面有密码和秘钥！)
 .env

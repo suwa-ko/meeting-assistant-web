@@ -248,12 +248,18 @@
           </div>
           <div class="modal-body">
             <div class="mb-3">
-              <label class="form-label fw-bold">选择大模型能力模式：</label>
-              <select id="modelSelectInput" class="form-select">
-                <option value="qwen/qwen3-4b-2507">🚀 快速响应模型 (qwen3-4b-2507)</option>
-                <option value="qwen3.5-35b-a3b">🧠 专家思考模型 (qwen3.5-35b-a3b)</option>
-              </select>
-              <div class="form-text">注意：切换前请确保您已经在 LM Studio 中加载了对应的模型。</div>
+              <label class="form-label fw-bold">当前对接的大模型：</label>
+              <input
+                type="text"
+                id="modelSelectInput"
+                class="form-control"
+                value="deepseek-chat"
+                readonly
+              />
+              <div class="form-text">
+                提示：当前系统已深度接入 DeepSeek 云端能力，如需更换模型，请修改后台 .env
+                环境变量文件。
+              </div>
             </div>
 
             <div class="mb-3 border-top pt-3 mt-3">
@@ -460,11 +466,7 @@
           const data = await res.json();
           if (data.model) {
             currentModel = data.model;
-            const select = document.getElementById("modelSelectInput");
-            if ([...select.options].some((opt) => opt.value === data.model)) {
-              select.value = data.model;
-            }
-            updateMicVisibilityByModel(data.model);
+            document.getElementById("modelSelectInput").value = data.model;
           }
         } catch (e) {
           console.error("加载设置失败", e);
@@ -496,168 +498,14 @@
         document.getElementById("bgImageInput").value = bgImageUrl;
         applyBackgroundImage(bgImageUrl);
 
-        // 2. 接口提交更新模型
-        try {
-          const res = await fetch("/api/settings", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model: model }),
-          });
-          const data = await res.json();
-          if (data.success) {
-            // 关闭模态框
-            const modalEl = document.getElementById("settingsModal");
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
-
-            // 更新麦克风按钮状态
-            updateMicVisibilityByModel(model);
-
-            // 在对话框里悄悄提示一句（只有模型真正改变时才提示）
-            if (model !== currentModel) {
-              const chatBox = document.getElementById("chatBox");
-              chatBox.innerHTML += `
-                <div class="message ai-message">
-                    <div class="message-content text-success">
-                        <i class="bi bi-check-circle"></i> 模型接口已切换至：${model.includes("35b") ? "专家思考模型" : "快速响应模型"}
-                    </div>
-                    <div class="message-time">系统提示</div>
-                </div>
-              `;
-              chatBox.scrollTop = chatBox.scrollHeight;
-              currentModel = model;
-            }
-          } else {
-            alert(data.msg || "保存失败");
-          }
-        } catch (e) {
-          alert("请求失败，请检查网络！");
-        } finally {
+        // （由于目前不支持前端修改模型，这里不用调用 /api/settings，直接关闭并且避免冗余代码）
+        setTimeout(() => {
+          btn.innerHTML = "💾 保存设置";
           btn.disabled = false;
-          btn.innerHTML = "保存并生效";
-        }
+          bootstrap.Modal.getInstance(document.getElementById("settingsModal")).hide();
+        }, 500);
       }
 
-      // ---------------- 语音识别相关逻辑 ----------------
-      let voiceRecognition = null;
-      let meetingRecognition = null;
-      let isRecordingChat = false;
-      let isRecordingMeeting = false;
-
-      function initSpeechRecognition() {
-        if (!("webkitSpeechRecognition" in window) && !("SpeechRecognition" in window)) {
-          console.warn("当前浏览器不支持语音识别 API");
-          document.getElementById("micBtn").style.display = "none";
-          document.getElementById("recordMeetingBtn").style.display = "none";
-          return;
-        }
-
-        const SpeechRecognize = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-        // 1. 聊天语音录入
-        voiceRecognition = new SpeechRecognize();
-        voiceRecognition.lang = "zh-CN";
-        voiceRecognition.continuous = false;
-        voiceRecognition.interimResults = true;
-
-        voiceRecognition.onresult = function (event) {
-          let interimTranscript = "";
-          let finalTranscript = "";
-
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript;
-            } else {
-              interimTranscript += event.results[i][0].transcript;
-            }
-          }
-
-          let input = document.getElementById("chatInput");
-          if (finalTranscript) {
-            input.value = finalTranscript;
-            // 收到最终结果，自动发送
-            sendMessage();
-          } else {
-            input.value = interimTranscript;
-          }
-        };
-
-        voiceRecognition.onend = function () {
-          isRecordingChat = false;
-          const micBtn = document.getElementById("micBtn");
-          micBtn.classList.remove("btn-danger");
-          micBtn.classList.add("btn-outline-secondary");
-          micBtn.innerHTML = '<i class="bi bi-mic"></i>';
-        };
-
-        document.getElementById("micBtn").addEventListener("click", function () {
-          if (isRecordingChat) {
-            voiceRecognition.stop();
-          } else {
-            document.getElementById("chatInput").value = "";
-            voiceRecognition.start();
-            isRecordingChat = true;
-            this.classList.remove("btn-outline-secondary");
-            this.classList.add("btn-danger");
-            this.innerHTML = '<i class="bi bi-stop-circle"></i>';
-          }
-        });
-
-        // 2. 会议纪要持续录音
-        meetingRecognition = new SpeechRecognize();
-        meetingRecognition.lang = "zh-CN";
-        meetingRecognition.continuous = true;
-        meetingRecognition.interimResults = true;
-
-        meetingRecognition.onresult = function (event) {
-          let interimTranscript = "";
-          let finalTranscript = "";
-
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript + "。";
-            } else {
-              interimTranscript += event.results[i][0].transcript;
-            }
-          }
-
-          let textArea = document.getElementById("meetingText");
-          // 追加最终结果到原有文本
-          if (finalTranscript) {
-            textArea.value += finalTranscript + "\n";
-          }
-        };
-
-        meetingRecognition.onend = function () {
-          if (isRecordingMeeting) {
-            // 如果意外中断，尝试重启
-            try {
-              meetingRecognition.start();
-            } catch (e) {}
-          }
-        };
-
-        document.getElementById("recordMeetingBtn").addEventListener("click", function () {
-          if (isRecordingMeeting) {
-            isRecordingMeeting = false;
-            meetingRecognition.stop();
-            this.classList.remove("btn-danger");
-            this.classList.add("btn-outline-danger");
-            document.getElementById("recordMeetingText").innerText = "继续录音";
-            this.innerHTML =
-              '<i class="bi bi-record-circle"></i> <span id="recordMeetingText">继续录音</span>';
-          } else {
-            isRecordingMeeting = true;
-            try {
-              meetingRecognition.start();
-            } catch (e) {}
-            this.classList.remove("btn-outline-danger");
-            this.classList.add("btn-danger");
-            this.innerHTML =
-              '<i class="bi bi-stop-circle"></i> <span id="recordMeetingText">停止录音</span>';
-          }
-        });
-      }
       // ----------------------------------------------------
 
       // 加载会议室状态
@@ -729,11 +577,6 @@
         // 保持上下文不要太长，最多保留最近的8条（即4轮对话），避免占用太多token
         if (chatHistory.length > 8) {
           chatHistory = chatHistory.slice(chatHistory.length - 8);
-        }
-
-        // 如果在语音识别期间发送，需要停止识别
-        if (voiceRecognition && isRecordingChat) {
-          voiceRecognition.stop();
         }
 
         // 添加用户消息
