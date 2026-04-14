@@ -10,7 +10,7 @@
 
 1. **Python 环境**：已安装 Python 3.8 或更高版本，并配置到系统环境变量。
 2. **DeepSeek 账号**：前往 [DeepSeek 开放平台](https://platform.deepseek.com/) 注册账号并获取 API Key。
-3. **现代浏览器**：推荐使用最新版 Chrome 或 Edge，以保证完整的前端功能（特别是录音 API 的支持）。
+3. **现代浏览器**：推荐使用最新版 Chrome 或 Edge，以保证完整的前端功能。
 
 ---
 
