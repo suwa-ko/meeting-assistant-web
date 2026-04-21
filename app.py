@@ -396,6 +396,45 @@ def index():return render_template('index.html')
 def admin_page():
     return render_template('admin.html')
 
+@app.route('/api/admin/users', methods=["GET", "DELETE"])
+@jwt_required()
+def admin_users():
+    current_user = get_jwt_identity()
+    if current_user != "admin":
+        return jsonify({"success": 0, "msg": "权限不足，仅限管理员账号访问"})
+
+    conn = get_db_connection()
+    conn.row_factory = sqlite3.Row
+    c = conn.cursor()
+
+    try:
+        if request.method == "GET":
+            # 排除密码字段以策安全
+            query = '''SELECT id, username FROM users ORDER BY id ASC'''
+            users = [dict(row) for row in c.execute(query).fetchall()]
+            return jsonify({"success": 1, "users": users})
+        elif request.method == "DELETE":
+            user_id = request.json.get("id")
+            if not user_id:
+                return jsonify({"success": 0, "msg": "未提供要删除的用户ID"})
+
+            c.execute("SELECT username FROM users WHERE id=?", (user_id,))
+            u = c.fetchone()
+            if not u:
+                return jsonify({"success": 0, "msg": "用户不存在"})
+            if u["username"] == "admin":
+                return jsonify({"success": 0, "msg": "不能删除超级管理员账号"})
+
+            del_name = u["username"]
+            c.execute("DELETE FROM users WHERE id=?", (user_id,))
+            c.execute("DELETE FROM reservations WHERE user_name=?", (del_name,))
+            conn.commit()
+            return jsonify({"success": 1, "msg": f"用户 {del_name} 及相关预约已删除"})
+    except Exception as e:
+        return jsonify({"success": 0, "msg": f"操作出错: {str(e)}"})
+    finally:
+        conn.close()
+
 @app.route('/api/admin/rooms', methods=["GET", "POST", "PUT", "DELETE"])
 @jwt_required()
 def admin_rooms():

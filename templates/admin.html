@@ -180,6 +180,29 @@
           </div>
         </div>
       </div>
+      <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center py-3">
+          <h5 class="m-0">用户账号管理</h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-hover align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th width="20%">用户ID</th>
+                  <th width="40%">账号名称</th>
+                  <th width="40%" class="text-end">操作</th>
+                </tr>
+              </thead>
+              <tbody id="userTableBody">
+                <tr>
+                  <td colspan="3" class="text-center text-muted py-4">载入中...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Room Modal -->
@@ -272,6 +295,7 @@
         resModal = new bootstrap.Modal(document.getElementById("resModal"));
         loadRooms();
         loadReservations();
+        loadUsers();
       });
 
       async function apiCall(method, bodyData = null) {
@@ -431,6 +455,61 @@
           loadReservations();
         }
         else alert(res?.msg || "操作失败");
+      }
+
+      async function loadUsers() {
+        const options = {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+        };
+        const res = await fetch("/api/admin/users", options);
+        if (res.status === 401) return;
+        const data = await res.json();
+        if (!data || !data.success) return;
+
+        const tbody = document.getElementById("userTableBody");
+        tbody.innerHTML = "";
+        if (data.users.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="3" class="text-center text-muted py-4">暂无用户数据</td></tr>';
+          return;
+        }
+
+        data.users.forEach((u) => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+        <td><span class="badge bg-secondary"># ${u.id}</span></td>
+        <td class="fw-bold"><i class="bi bi-person text-muted"></i> ${u.username}</td>
+        <td class="text-end">
+          ${u.username === 'admin' ? '<span class="text-muted small">系统核心</span>' : `<button class="btn btn-sm btn-outline-danger" onclick='deleteUser(${u.id}, "${u.username}")'><i class="bi bi-trash"></i> 删除</button>`}
+        </td>
+      `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      async function deleteUser(id, username) {
+        if (!confirm(`确定要彻底删除账号 "${username}" 吗？该用户的所有当前和历史预约记录也会全面清除！`)) return;
+        const options = {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + token,
+          },
+          body: JSON.stringify({ id })
+        };
+        const res = await fetch("/api/admin/users", options);
+        const data = await res.json();
+        if (data && data.success) {
+          alert(data.msg);
+          loadUsers();
+          loadReservations(); // 用户被删，相关预约也被删了，刷新预约列表
+        } else {
+          alert(data?.msg || "操作失败");
+        }
       }
 
       async function apiCallReservations(method, bodyData = null) {
