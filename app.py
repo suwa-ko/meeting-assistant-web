@@ -105,7 +105,7 @@ def call_deepseek_stream(prompt, db_info="", custom_system_prompt=None, history=
    - 过去时间拦截：坚决拒绝任何预约时间早于“当前系统时间”的请求。
    - 虚假会议室拦截：不可预约或操作数据库列表（JSON）中根本不存在的会议室。若找不到，列出可用的会议室名单。
    - 物理限制拦截：检查用户的参会人数是否超过会议室容量（capacity），要求使用的设备该会议室是否存在，若不满足则拒绝并推荐其他会议室。
-   - 冲突精细检测：必须严格对齐具体的年月日下的时间区间。如果存在时间交集冲突，明确告知冲突详情，并主动推荐其他可用会议室或空闲时间。
+   - 冲突精细检测：必须严格对齐【具体的年、月、日】以及【时、分】。不同日期（如22号和23号）绝不冲突！！！切莫将别的日期的预约张冠李戴误认为是当前日期的冲突。如果存在真实的时间交集冲突，明确告知冲突详情，并主动推荐其他可用会议室或空闲时间。
    - 权限拦截：当前用户若要求取消明确属于“其他名字”用户的单条预约记录（而非批量全部），予以礼貌拒绝。
 4. 禁令：此模式下，禁止回复任何带中括号/大括号的 JSON 操作指令、禁止暴露原始数据库字段。
 
@@ -605,7 +605,7 @@ def ai_chat():
             (r["id"],)).fetchall()]
     conn.close()
 
-    db_info = json.dumps(rooms, ensure_ascii=False)
+    db_info = "【当前所有可用会议室及其已存在的预约详细列表（务必看清 start_time 和 end_time 的具体日期）】\\n" + json.dumps(rooms, ensure_ascii=False, indent=2)
 
     return Response(stream_with_context(call_deepseek_stream(p, db_info, history=history, username=username)), mimetype='text/event-stream')
 
